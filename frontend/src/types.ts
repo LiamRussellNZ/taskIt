@@ -1,7 +1,7 @@
 export type UserRole = 'ASKER' | 'DOER'
 export type TaskStatus = 'OPEN' | 'CLAIMED' | 'COMPLETED' | 'CANCELLED'
 export type BoardView = 'OPEN' | 'MINE_AS_ASKER' | 'MINE_AS_DOER'
-export type NotificationType = 'ASSISTANCE_REQUEST' | 'TASK_QUESTION' | 'TASK_COMPLETED'
+export type NotificationType = 'ASSISTANCE_REQUEST' | 'TASK_QUESTION' | 'TASK_COMPLETED' | 'CHAT_MESSAGE'
 
 export interface User {
   id: number
@@ -85,6 +85,13 @@ export interface UserNotification {
   taskTitle: string
   actor: User
   createdAt: string
+}
+
+export interface TaskChatMessage {
+  id: number
+  sender: User
+  message: string
+  sentAt: string
 }
 
 export interface ProfileTask {

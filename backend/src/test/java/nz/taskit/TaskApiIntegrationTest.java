@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Set;
 import nz.taskit.domain.UserRole;
 import nz.taskit.repository.AppUserRepository;
+import nz.taskit.repository.TaskChatMessageRepository;
+import nz.taskit.repository.TaskChatRoomRepository;
 import nz.taskit.repository.TaskRepository;
 import nz.taskit.web.dto.UserCreateRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,10 +62,18 @@ class TaskApiIntegrationTest {
     TaskRepository tasks;
 
     @Autowired
+    TaskChatRoomRepository chatRooms;
+
+    @Autowired
+    TaskChatMessageRepository chatMessages;
+
+    @Autowired
     AppUserRepository users;
 
     @BeforeEach
     void clearData() {
+        chatMessages.deleteAll();
+        chatRooms.deleteAll();
         tasks.deleteAll();
         users.deleteAll();
     }
@@ -271,6 +281,83 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$[0].actor.id").value(assignedDoer));
         mvc.perform(get("/api/users/{id}/notifications", asker).header(USER_HEADER, helper))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void chatParticipantsCanExchangeMessagesAndOthersAreRejected() throws Exception {
+        long asker = createUser("Asha", "asha@example.test", UserRole.ASKER);
+        long doer = createUser("Dane", "dane@example.test", UserRole.DOER);
+        long outsider = createUser("Owen", "owen@example.test", UserRole.DOER);
+        long taskId = createTask(asker);
+
+        mvc.perform(post("/api/tasks/{id}/claim", taskId).header(USER_HEADER, doer))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/api/tasks/{id}/chat/messages", taskId).header(USER_HEADER, asker)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Please arrive at 10.\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sender.id").value(asker))
+                .andExpect(jsonPath("$.message").value("Please arrive at 10."));
+
+        mvc.perform(get("/api/users/{id}/notifications", doer).header(USER_HEADER, doer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("CHAT_MESSAGE"))
+                .andExpect(jsonPath("$[0].actor.id").value(asker))
+                .andExpect(jsonPath("$[0].taskId").value(taskId));
+
+        mvc.perform(post("/api/tasks/{id}/chat/messages", taskId).header(USER_HEADER, doer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"I will be there.\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sender.id").value(doer));
+
+        mvc.perform(get("/api/tasks/{id}/chat/messages", taskId).header(USER_HEADER, asker))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].message").value("Please arrive at 10."))
+                .andExpect(jsonPath("$[1].message").value("I will be there."));
+
+        mvc.perform(get("/api/tasks/{id}/chat/messages", taskId).header(USER_HEADER, outsider))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void chatClosesOnCompletionCancellationAndDropAndIsolatedForReplacementDoers() throws Exception {
+        long asker = createUser("Asha", "asha@example.test", UserRole.ASKER);
+        long originalDoer = createUser("Dane", "dane@example.test", UserRole.DOER);
+        long replacementDoer = createUser("Riley", "riley@example.test", UserRole.DOER);
+        long completedTask = createTask(asker);
+
+        mvc.perform(post("/api/tasks/{id}/claim", completedTask).header(USER_HEADER, originalDoer))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/tasks/{id}/complete", completedTask).header(USER_HEADER, asker))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/tasks/{id}/chat/messages", completedTask).header(USER_HEADER, asker))
+                .andExpect(status().isConflict());
+
+        long droppedTask = createTask(asker);
+        mvc.perform(post("/api/tasks/{id}/claim", droppedTask).header(USER_HEADER, originalDoer))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/tasks/{id}/chat/messages", droppedTask).header(USER_HEADER, originalDoer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"I need to drop this task.\"}"))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/tasks/{id}/drop", droppedTask).header(USER_HEADER, originalDoer))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/tasks/{id}/chat/messages", droppedTask).header(USER_HEADER, asker))
+                .andExpect(status().isConflict());
+
+        mvc.perform(post("/api/tasks/{id}/claim", droppedTask).header(USER_HEADER, replacementDoer))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/tasks/{id}/chat/messages", droppedTask).header(USER_HEADER, replacementDoer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+        mvc.perform(get("/api/tasks/{id}/chat/messages", droppedTask).header(USER_HEADER, originalDoer))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/tasks/{id}/cancel", droppedTask).header(USER_HEADER, asker))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/tasks/{id}/chat/messages", droppedTask).header(USER_HEADER, asker))
+                .andExpect(status().isConflict());
     }
 
     @Test

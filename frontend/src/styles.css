@@ -65,6 +65,13 @@ dd { margin: 0; }
 .status-update { border-top: 1px solid #eaecf0; padding: 12px 0; }
 .status-update:last-child { padding-bottom: 0; }
 .status-update .status { margin-left: 8px; vertical-align: middle; }
+.chat { border-top: 1px solid #eaecf0; margin-top: 18px; padding-top: 18px; }
+.chat-description { color: #667085; font-size: .88rem; }
+.chat-messages { display: grid; gap: 8px; list-style: none; margin: 0 0 14px; padding: 0; }
+.chat-messages li { background: #f2f4f7; border-radius: 8px; padding: 10px; }
+.chat-messages li.own-message { background: #eef4ff; }
+.chat-messages p { margin: 4px 0; white-space: pre-wrap; }
+.chat-messages small { color: #667085; }
 
 @media (max-width: 760px) {
   main { padding: 22px 14px; }

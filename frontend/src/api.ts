@@ -1,4 +1,4 @@
-import type { ApiError, BoardView, Task, TaskDraft, User, UserNotification, UserProfile, UserRole } from './types'
+import type { ApiError, BoardView, Task, TaskChatMessage, TaskDraft, User, UserNotification, UserProfile, UserRole } from './types'
 
 async function request<T>(path: string, options: RequestInit = {}, userId?: number): Promise<T> {
   const headers = new Headers(options.headers)
@@ -69,5 +69,12 @@ export const api = {
     request<Task>(`/api/tasks/${taskId}/questions/${questionId}/answer`, {
       method: 'POST',
       body: JSON.stringify({ answer }),
+    }, userId),
+  listChatMessages: (taskId: number, userId: number) =>
+    request<TaskChatMessage[]>(`/api/tasks/${taskId}/chat/messages`, {}, userId),
+  sendChatMessage: (taskId: number, message: string, userId: number) =>
+    request<TaskChatMessage>(`/api/tasks/${taskId}/chat/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
     }, userId),
 }

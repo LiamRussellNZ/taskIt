@@ -3,10 +3,14 @@ package nz.taskit.service;
 import java.util.List;
 import nz.taskit.domain.AppUser;
 import nz.taskit.domain.Task;
+import nz.taskit.domain.TaskChatMessage;
+import nz.taskit.domain.TaskChatRoom;
 import nz.taskit.domain.TaskStatus;
 import nz.taskit.domain.UserNotificationType;
 import nz.taskit.domain.UserRole;
 import nz.taskit.repository.TaskAssistanceRequestRepository;
+import nz.taskit.repository.TaskChatMessageRepository;
+import nz.taskit.repository.TaskChatRoomRepository;
 import nz.taskit.repository.TaskQuestionRepository;
 import nz.taskit.repository.TaskReviewRepository;
 import nz.taskit.repository.TaskRepository;
@@ -14,6 +18,8 @@ import nz.taskit.repository.StatusUpdateRequestRepository;
 import nz.taskit.web.TaskView;
 import nz.taskit.web.dto.StatusUpdateResponse;
 import nz.taskit.web.dto.StatusUpdateWriteRequest;
+import nz.taskit.web.dto.TaskChatMessageResponse;
+import nz.taskit.web.dto.TaskChatMessageWriteRequest;
 import nz.taskit.web.dto.TaskAssistanceRequestResponse;
 import nz.taskit.web.dto.TaskDropReviewRequest;
 import nz.taskit.web.dto.TaskDropResponse;
@@ -37,6 +43,8 @@ public class TaskService {
     private final TaskAssistanceRequestRepository assistanceRequests;
     private final TaskQuestionRepository questions;
     private final TaskReviewRepository reviews;
+    private final TaskChatRoomRepository chatRooms;
+    private final TaskChatMessageRepository chatMessages;
     private final UserService userService;
     private final UserNotificationService notifications;
 
@@ -46,6 +54,8 @@ public class TaskService {
             TaskAssistanceRequestRepository assistanceRequests,
             TaskQuestionRepository questions,
             TaskReviewRepository reviews,
+            TaskChatRoomRepository chatRooms,
+            TaskChatMessageRepository chatMessages,
             UserService userService,
             UserNotificationService notifications
     ) {
@@ -54,6 +64,8 @@ public class TaskService {
         this.assistanceRequests = assistanceRequests;
         this.questions = questions;
         this.reviews = reviews;
+        this.chatRooms = chatRooms;
+        this.chatMessages = chatMessages;
         this.userService = userService;
         this.notifications = notifications;
     }
@@ -125,6 +137,7 @@ public class TaskService {
             throw new ConflictException("You cannot claim a task you previously dropped");
         }
         task.claim(actor);
+        chatRooms.save(new TaskChatRoom(task, actor));
         return toResponse(task);
     }
 
@@ -141,6 +154,7 @@ public class TaskService {
         if (!isAsker && !isAssignedDoer) {
             throw new ForbiddenException("Only the task asker or assigned doer can complete this task");
         }
+        closeChat(task);
         task.complete();
         if (isAssignedDoer) {
             notifications.create(task.getAsker(), task, actor, UserNotificationType.TASK_COMPLETED);
@@ -156,6 +170,7 @@ public class TaskService {
         if (task.getStatus() == TaskStatus.COMPLETED || task.getStatus() == TaskStatus.CANCELLED) {
             throw new ConflictException("Completed or cancelled tasks cannot be cancelled");
         }
+        closeChat(task);
         task.cancel();
         return toResponse(task);
     }
@@ -170,6 +185,7 @@ public class TaskService {
         if (task.getAssignedDoer() == null || !task.getAssignedDoer().getId().equals(actor.getId())) {
             throw new ForbiddenException("Only the assigned doer can drop this task");
         }
+        closeChat(task);
         task.drop();
         tasks.saveAndFlush(task);
         return toResponse(task);
@@ -292,6 +308,28 @@ public class TaskService {
         return toResponse(task);
     }
 
+    public List<TaskChatMessageResponse> listChatMessages(Long userId, Long taskId) {
+        AppUser actor = userService.requireUser(userId);
+        Task task = requireTask(taskId);
+        TaskChatRoom room = requireActiveChat(task);
+        requireChatParticipant(actor, task, room);
+        return chatMessages.findByRoomIdOrderBySentAtAscIdAsc(room.getId()).stream()
+                .map(this::toChatMessageResponse)
+                .toList();
+    }
+
+    @Transactional
+    public TaskChatMessageResponse sendChatMessage(Long userId, Long taskId, TaskChatMessageWriteRequest request) {
+        AppUser actor = userService.requireUser(userId);
+        Task task = requireTask(taskId);
+        TaskChatRoom room = requireActiveChat(task);
+        requireChatParticipant(actor, task, room);
+        TaskChatMessage message = chatMessages.save(new TaskChatMessage(room, actor, request.message().trim()));
+        AppUser recipient = task.getAsker().getId().equals(actor.getId()) ? room.getPrimaryDoer() : task.getAsker();
+        notifications.create(recipient, task, actor, UserNotificationType.CHAT_MESSAGE);
+        return toChatMessageResponse(message);
+    }
+
     @Transactional
     public TaskResponse respondToStatusUpdate(Long userId, Long taskId, Long statusUpdateId, StatusUpdateWriteRequest request) {
         AppUser actor = userService.requireUser(userId);
@@ -336,6 +374,35 @@ public class TaskService {
         if (!task.getAsker().getId().equals(actor.getId())) {
             throw new ForbiddenException("Only the task asker may perform this action");
         }
+    }
+
+    private TaskChatRoom requireActiveChat(Task task) {
+        if (task.getStatus() != TaskStatus.CLAIMED) {
+            throw new ConflictException("Chat is only available while a task is claimed");
+        }
+        return chatRooms.findByTaskIdAndClosedAtIsNull(task.getId())
+                .orElseThrow(() -> new ConflictException("Chat is not available for this task"));
+    }
+
+    private void requireChatParticipant(AppUser actor, Task task, TaskChatRoom room) {
+        boolean isAsker = task.getAsker().getId().equals(actor.getId());
+        boolean isPrimaryDoer = room.getPrimaryDoer().getId().equals(actor.getId());
+        if (!isAsker && !isPrimaryDoer) {
+            throw new ForbiddenException("Only the task asker or Primary Doer may use this chat");
+        }
+    }
+
+    private void closeChat(Task task) {
+        chatRooms.findByTaskIdAndClosedAtIsNull(task.getId()).ifPresent(TaskChatRoom::close);
+    }
+
+    private TaskChatMessageResponse toChatMessageResponse(TaskChatMessage message) {
+        return new TaskChatMessageResponse(
+                message.getId(),
+                userService.toResponse(message.getSender()),
+                message.getMessage(),
+                message.getSentAt()
+        );
     }
 
     private TaskResponse toResponse(Task task) {

@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import java.util.List;
 import nz.taskit.service.TaskService;
 import nz.taskit.web.dto.TaskResponse;
+import nz.taskit.web.dto.TaskChatMessageResponse;
+import nz.taskit.web.dto.TaskChatMessageWriteRequest;
 import nz.taskit.web.dto.TaskWriteRequest;
 import nz.taskit.web.dto.StatusUpdateWriteRequest;
 import nz.taskit.web.dto.TaskDropReviewRequest;
@@ -148,5 +150,23 @@ public class TaskController {
             @Valid @RequestBody TaskQuestionAnswerRequest request
     ) {
         return tasks.answerQuestion(userId, id, questionId, request);
+    }
+
+    @GetMapping("/{id}/chat/messages")
+    public List<TaskChatMessageResponse> listChatMessages(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id
+    ) {
+        return tasks.listChatMessages(userId, id);
+    }
+
+    @PostMapping("/{id}/chat/messages")
+    @ResponseStatus(HttpStatus.CREATED)
+    public TaskChatMessageResponse sendChatMessage(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @Valid @RequestBody TaskChatMessageWriteRequest request
+    ) {
+        return tasks.sendChatMessage(userId, id, request);
     }
 }

@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { api } from './api'
-import type { BoardView, Task, TaskDraft, User, UserNotification, UserProfile, UserRole } from './types'
+import type { BoardView, Task, TaskChatMessage, TaskDraft, User, UserNotification, UserProfile, UserRole } from './types'
 
 const emptyTask: TaskDraft = { title: '', description: '', category: '', location: '', remote: false }
 const viewLabels: Record<BoardView, string> = {
@@ -27,6 +27,8 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(false)
   const [notifications, setNotifications] = useState<UserNotification[]>([])
+  const [chatMessages, setChatMessages] = useState<TaskChatMessage[]>([])
+  const [chatLoading, setChatLoading] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -76,6 +78,33 @@ export default function App() {
   }, [activeUserId])
 
   useEffect(() => { void loadNotifications() }, [loadNotifications])
+
+  const canUseSelectedChat = selected?.status === 'CLAIMED'
+    && Boolean(activeUserId)
+    && (selected.asker.id === activeUserId || selected.assignedDoer?.id === activeUserId)
+
+  const loadChatMessages = useCallback(async () => {
+    if (!selected || !activeUserId || !canUseSelectedChat) {
+      setChatMessages([])
+      return
+    }
+    setChatLoading(true)
+    try {
+      setChatMessages(await api.listChatMessages(selected.id, activeUserId))
+    } catch (requestError) {
+      setChatMessages([])
+      setError(errorMessage(requestError))
+    } finally {
+      setChatLoading(false)
+    }
+  }, [activeUserId, canUseSelectedChat, selected])
+
+  useEffect(() => {
+    void loadChatMessages()
+    if (!canUseSelectedChat) return
+    const interval = window.setInterval(() => void loadChatMessages(), 15_000)
+    return () => window.clearInterval(interval)
+  }, [canUseSelectedChat, loadChatMessages])
 
   function selectUser(id: number | undefined) {
     setActiveUserId(id)
@@ -237,6 +266,20 @@ export default function App() {
     }
   }
 
+  async function sendChatMessage(message: string) {
+    if (!activeUser || !selected) return
+    setSaving(true)
+    setError('')
+    try {
+      await api.sendChatMessage(selected.id, message, activeUser.id)
+      await loadChatMessages()
+    } catch (requestError) {
+      setError(errorMessage(requestError))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const canAsk = activeUser?.roles.includes('ASKER') ?? false
 
   return (
@@ -275,7 +318,9 @@ export default function App() {
                   ? `${notification.actor.displayName} requested help with “${notification.taskTitle}”.`
                   : notification.type === 'TASK_QUESTION'
                     ? `${notification.actor.displayName} asked a question about “${notification.taskTitle}”.`
-                    : `${notification.actor.displayName} completed “${notification.taskTitle}”. Leave a review.`}
+                      : notification.type === 'CHAT_MESSAGE'
+                        ? `${notification.actor.displayName} sent a chat message about “${notification.taskTitle}”.`
+                        : `${notification.actor.displayName} completed “${notification.taskTitle}”. Leave a review.`}
               </button>
               <small>{new Date(notification.createdAt).toLocaleString()}</small>
             </li>)}
@@ -356,6 +401,9 @@ export default function App() {
               onReviewCompletion={(rating, review) => void reviewTaskCompletion(rating, review)}
               onAskQuestion={(question) => void askQuestion(question)}
               onAnswerQuestion={(questionId, answer) => void answerQuestion(questionId, answer)}
+              chatMessages={chatMessages}
+              chatLoading={chatLoading}
+              onSendChatMessage={(message) => void sendChatMessage(message)}
               onViewProfile={(userId) => void openProfile(userId)} /> :
               <p className="empty">Select a task to see its details, or post one when acting as an asker.</p>}
         </aside>
@@ -406,6 +454,9 @@ function TaskDetails({
   onReviewCompletion,
   onAskQuestion,
   onAnswerQuestion,
+  chatMessages,
+  chatLoading,
+  onSendChatMessage,
   onViewProfile,
 }: {
   task: Task
@@ -424,6 +475,9 @@ function TaskDetails({
   onReviewCompletion: (rating: number, review: string) => void
   onAskQuestion: (question: string) => void
   onAnswerQuestion: (questionId: number, answer: string) => void
+  chatMessages: TaskChatMessage[]
+  chatLoading: boolean
+  onSendChatMessage: (message: string) => void
   onViewProfile: (userId: number) => void
 }) {
   const isAsker = activeUser?.id === task.asker.id
@@ -482,6 +536,20 @@ function TaskDetails({
           </div>
         ))}
         {canAskQuestion && <QuestionForm saving={saving} label="Ask a question" submitLabel="Post question" onSubmit={onAskQuestion} />}
+      </section>}
+      {task.status === 'CLAIMED' && (isAsker || isDoer) && <section className="chat">
+        <h3>Private chat</h3>
+        <p className="chat-description">Only the task asker and Primary Doer can view and send messages.</p>
+        {chatLoading && chatMessages.length === 0 ? <p>Loading messages…</p> :
+          chatMessages.length === 0 ? <p className="empty">No messages yet.</p> :
+            <ol className="chat-messages">
+              {chatMessages.map((message) => <li key={message.id} className={message.sender.id === activeUser?.id ? 'own-message' : ''}>
+                <strong>{message.sender.displayName}</strong>
+                <p>{message.message}</p>
+                <small>{new Date(message.sentAt).toLocaleString()}</small>
+              </li>)}
+            </ol>}
+        <ChatMessageForm saving={saving} onSubmit={onSendChatMessage} />
       </section>}
       {task.statusUpdates.length > 0 && <section className="status-updates">
         <h3>Status updates</h3>
@@ -559,6 +627,20 @@ function QuestionForm({ saving, label, submitLabel, onSubmit }: {
     }}>
       <label>{label}<textarea value={value} onChange={(event) => setValue(event.target.value)} required maxLength={2000} rows={3} /></label>
       <button className="primary" disabled={saving}>{saving ? 'Sending…' : submitLabel}</button>
+    </form>
+  )
+}
+
+function ChatMessageForm({ saving, onSubmit }: { saving: boolean; onSubmit: (message: string) => void }) {
+  const [message, setMessage] = useState('')
+  return (
+    <form className="task-form" onSubmit={(event) => {
+      event.preventDefault()
+      onSubmit(message)
+      setMessage('')
+    }}>
+      <label>Message<textarea value={message} onChange={(event) => setMessage(event.target.value)} required maxLength={2000} rows={3} /></label>
+      <button className="primary" disabled={saving}>{saving ? 'Sending…' : 'Send message'}</button>
     </form>
   )
 }
