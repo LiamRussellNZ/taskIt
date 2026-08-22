@@ -85,6 +85,21 @@ user names and the active-user menu to it.
 When an assigned doer completes a task, the asker receives a notification and may submit one 1–5 review through
 `POST /api/tasks/{id}/completion-review`. Completed-task reviews determine a doer's average received rating.
 
+## Generate sample data
+
+With the backend running, create themed sample ASKERS, DOERS, and open tasks. This requires Node.js and `curl`, which
+are available on supported Windows and Unix systems:
+
+```shell
+node scripts/seed-data.mjs
+```
+
+Use parameters to choose the API URL and record counts:
+
+```shell
+node scripts/seed-data.mjs --base-url http://localhost:8080 --askers 5 --doers 8 --tasks 30
+```
+
 ## Verify
 
 Docker must be running because backend integration tests use a disposable PostgreSQL Testcontainers instance.
@@ -124,6 +139,4 @@ How to know a feature can be picked up for Copilot or another agent or even a hu
 - DOER: Respond to accept reject requests.
 - HELPER: On my work tab I want a section for tasks I am helping with. And all tasks that I have offered to help with.
 - HELPER: I want to be able to cancel my offer to help.
-
-
 
