@@ -21,7 +21,7 @@ Documentation provides product intent; the code, database migrations, and tests 
 
 Before implementing, identify how the request affects:
 
-- roles and permissions: `ASKER`, `DOER`, and `HELPER`;
+- roles and permissions (`UserRole`): `ASKER` and `DOER` (a "helper" is a doer who offers assistance);
 - task lifecycle and allowed state transitions;
 - API contracts, persistence, and Flyway migrations;
 - notifications, public profiles, ratings, and completion reviews;

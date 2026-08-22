@@ -1,4 +1,4 @@
-# Feature: <name>
+# Feature: {name}
 
 ## Purpose
 
