@@ -23,8 +23,11 @@ import nz.taskit.web.dto.TaskQuestionWriteRequest;
 import nz.taskit.web.dto.TaskCompletionReviewResponse;
 import nz.taskit.web.dto.TaskReviewWriteRequest;
 import nz.taskit.web.dto.TaskResponse;
+import nz.taskit.web.dto.TaskPageResponse;
 import nz.taskit.web.dto.TaskWriteRequest;
 import nz.taskit.web.dto.UserResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -86,6 +89,28 @@ public class TaskService {
                     : tasks.findByAssignedDoerIdAndCategoryIgnoreCaseOrderByCreatedAtDesc(requireUserId(userId), category.trim());
         };
         return result.stream().map(this::toResponse).toList();
+    }
+
+    public TaskPageResponse listPage(TaskView view, String category, Long userId, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<Task> result = switch (view) {
+            case OPEN -> category == null || category.isBlank()
+                    ? tasks.findOpenBoardTasks(TaskStatus.OPEN, TaskStatus.CLAIMED, pageable)
+                    : tasks.findOpenBoardTasksByCategory(TaskStatus.OPEN, TaskStatus.CLAIMED, category.trim(), pageable);
+            case MINE_AS_ASKER -> category == null || category.isBlank()
+                    ? tasks.findByAskerIdOrderByCreatedAtDesc(requireUserId(userId), pageable)
+                    : tasks.findByAskerIdAndCategoryIgnoreCaseOrderByCreatedAtDesc(requireUserId(userId), category.trim(), pageable);
+            case MINE_AS_DOER -> category == null || category.isBlank()
+                    ? tasks.findByAssignedDoerIdOrderByCreatedAtDesc(requireUserId(userId), pageable)
+                    : tasks.findByAssignedDoerIdAndCategoryIgnoreCaseOrderByCreatedAtDesc(requireUserId(userId), category.trim(), pageable);
+        };
+        return new TaskPageResponse(
+                result.getContent().stream().map(this::toResponse).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
     }
 
     public TaskResponse get(Long taskId) {

@@ -1,4 +1,4 @@
-import type { ApiError, BoardView, Task, TaskDraft, User, UserNotification, UserProfile, UserRole } from './types'
+import type { ApiError, BoardView, Task, TaskDraft, TaskPage, User, UserNotification, UserProfile, UserRole } from './types'
 
 async function request<T>(path: string, options: RequestInit = {}, userId?: number): Promise<T> {
   const headers = new Headers(options.headers)
@@ -25,6 +25,11 @@ export const api = {
     const query = new URLSearchParams({ view })
     if (category.trim()) query.set('category', category.trim())
     return request<Task[]>(`/api/tasks?${query}`, {}, userId)
+  },
+  listTaskPage: (view: BoardView, category: string, page: number, size: number, userId?: number) => {
+    const query = new URLSearchParams({ view, page: String(page), size: String(size) })
+    if (category.trim()) query.set('category', category.trim())
+    return request<TaskPage>(`/api/tasks/page?${query}`, {}, userId)
   },
   getTask: (id: number) => request<Task>(`/api/tasks/${id}`),
   createTask: (draft: TaskDraft, userId: number) =>
