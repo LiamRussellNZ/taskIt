@@ -7,8 +7,34 @@ const defaults = {
   tasks: 20
 };
 
-const askerNames = ['Leia Nova', 'Tony Orbit', 'Diana Signal', 'Miles Vector', 'Dana Scully', 'Jean Luc'];
-const doerNames = ['Clark Forge', 'Natasha Byte', 'Kara Zenith', 'Peter Quill', 'Sam Beacon', 'Rory Vega'];
+const askerNames = [
+  'Leia Nova',
+  'Tony Orbit',
+  'Diana Signal',
+  'Miles Vector',
+  'Dana Scully',
+  'Jean Luc',
+  'Ellen Ripley',
+  'Trinity Matrix',
+  'Amelia Pond',
+  'Martha Jones',
+  'Lando Calrissian',
+  'River Song'
+];
+const doerNames = [
+  'Clark Forge',
+  'Natasha Byte',
+  'Kara Zenith',
+  'Peter Quill',
+  'Sam Beacon',
+  'Rory Vega',
+  'Bruce Wayne',
+  'Gamora Star',
+  'Shuri Panther',
+  'Din Djarin',
+  'Rey Skywalker',
+  'Tessa Thompson'
+];
 const taskTemplates = [
   { title: 'Help set up a sci-fi movie marathon', description: 'Need help arranging seats, snacks, and a projector for a weekend science-fiction marathon.', category: 'Events', location: 'Wellington', remote: false },
   { title: 'Organize a comic collection', description: 'Sort a mixed Marvel and DC comic collection into readable runs and storage boxes.', category: 'Organizing', location: 'Auckland', remote: false },
@@ -17,7 +43,15 @@ const taskTemplates = [
   { title: 'Help decorate a fandom watch-party space', description: 'Help arrange themed decorations, seating, and lighting for a television watch party.', category: 'Events', location: 'Christchurch', remote: false },
   { title: 'Create a comic-inspired playlist', description: 'Put together an upbeat playlist for reading comics and watching action shows.', category: 'Creative', location: 'Remote', remote: true },
   { title: 'Catalog collectible figures', description: 'Photograph and catalogue a small collection of sci-fi and superhero figures in a spreadsheet.', category: 'Organizing', location: 'Hamilton', remote: false },
-  { title: 'Design a TV watch-list tracker', description: 'Create a simple spreadsheet tracker for seasons, episodes, and recommendations.', category: 'Technology', location: 'Remote', remote: true }
+  { title: 'Design a TV watch-list tracker', description: 'Create a simple spreadsheet tracker for seasons, episodes, and recommendations.', category: 'Technology', location: 'Remote', remote: true },
+  { title: 'Repair a retro game console', description: 'Diagnose a loose controller port and help clean a retro console for a games night.', category: 'Repairs', location: 'Dunedin', remote: false },
+  { title: 'Digitize family photos', description: 'Scan and organize a box of family photographs into labelled folders for sharing.', category: 'Technology', location: 'Tauranga', remote: false },
+  { title: 'Plan a tabletop role-playing session', description: 'Help prepare character sheets, encounter notes, and a welcoming first-session plan.', category: 'Events', location: 'Remote', remote: true },
+  { title: 'Write a podcast episode outline', description: 'Create an outline for a short episode about memorable science-fiction television moments.', category: 'Writing', location: 'Remote', remote: true },
+  { title: 'Assemble flat-pack bookcases', description: 'Put together two bookcases and safely secure them for a growing graphic-novel library.', category: 'Moving', location: 'Napier', remote: false },
+  { title: 'Create cosplay costume repair kit', description: 'Sort practical supplies and make a checklist for quick costume repairs at a convention.', category: 'Creative', location: 'Palmerston North', remote: false },
+  { title: 'Research accessible streaming options', description: 'Compare subtitle, audio-description, and profile settings across popular streaming services.', category: 'Research', location: 'Remote', remote: true },
+  { title: 'Set up a home media server', description: 'Help configure a simple home media server and document how to add new files.', category: 'Technology', location: 'Nelson', remote: false }
 ];
 
 function parseOptions(argumentsList) {
