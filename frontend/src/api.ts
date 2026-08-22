@@ -29,7 +29,7 @@ export const api = {
   listTaskPage: (view: BoardView, category: string, page: number, size: number, userId?: number) => {
     const query = new URLSearchParams({ view, page: String(page), size: String(size) })
     if (category.trim()) query.set('category', category.trim())
-    return request<TaskPage>(`/api/tasks/page?${query}`, {}, userId)
+    return request<TaskPage>(`/api/v2/tasks?${query}`, {}, userId)
   },
   getTask: (id: number) => request<Task>(`/api/tasks/${id}`),
   createTask: (draft: TaskDraft, userId: number) =>

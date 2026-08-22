@@ -19,7 +19,7 @@ Each board loads page one using the saved page size. The user can select 25, 50,
 ## Integrations
 
 - **Related features:** Task lifecycle.
-- **Backend:** `TaskRepository`, `TaskService`, and `TaskController`; `GET /api/tasks/page` returns page content and metadata while the existing unpaged endpoint remains unchanged.
+- **Backend:** `TaskRepository`, `TaskService`, and `TaskController`; `GET /api/v2/tasks` returns page content and metadata while the existing unpaged `GET /api/tasks` endpoint remains unchanged.
 - **Frontend:** `frontend/src/App.tsx`, `api.ts`, `types.ts`, and `styles.css`.
 - **Notifications / profiles / reviews:** None.
 
@@ -28,7 +28,8 @@ Each board loads page one using the saved page size. The user can select 25, 50,
 - Given any board, when it loads, then the frontend requests 25, 50, or 75 matching tasks and displays the result count and current page.
 - Given a user who selects a page size, when they refresh the browser, then that size remains selected.
 - Given a board with more results, when a user selects Next or Previous, then the matching server page is displayed without navigating outside the available pages.
-- Given an existing API client that calls `GET /api/tasks`, when pagination is introduced, then the original unpaged response remains available.
+- Given an existing API client that calls `GET /api/tasks`, when pagination is introduced, then the original unpaged array response remains available.
+- Given a client that calls `GET /api/v2/tasks`, when it requests a valid page, then it receives page content and pagination metadata.
 
 ## Decisions and open questions
 

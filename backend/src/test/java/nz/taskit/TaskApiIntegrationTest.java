@@ -92,7 +92,7 @@ class TaskApiIntegrationTest {
         }
         createTask(otherAsker);
 
-        mvc.perform(get("/api/tasks/page").param("page", "0").param("size", "2"))
+        mvc.perform(get("/api/v2/tasks").param("page", "0").param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.page").value(0))
@@ -100,12 +100,12 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(5))
                 .andExpect(jsonPath("$.totalPages").value(3));
 
-        mvc.perform(get("/api/tasks/page").param("page", "2").param("size", "2"))
+        mvc.perform(get("/api/v2/tasks").param("page", "2").param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.page").value(2));
 
-        mvc.perform(get("/api/tasks/page").param("view", "MINE_AS_ASKER").param("page", "0").param("size", "2")
+        mvc.perform(get("/api/v2/tasks").param("view", "MINE_AS_ASKER").param("page", "0").param("size", "2")
                         .header(USER_HEADER, asker))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))

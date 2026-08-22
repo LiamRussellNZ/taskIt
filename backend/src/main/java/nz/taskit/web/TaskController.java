@@ -1,11 +1,8 @@
 package nz.taskit.web;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import java.util.List;
 import nz.taskit.service.TaskService;
-import nz.taskit.web.dto.TaskPageResponse;
 import nz.taskit.web.dto.TaskResponse;
 import nz.taskit.web.dto.TaskWriteRequest;
 import nz.taskit.web.dto.StatusUpdateWriteRequest;
@@ -53,17 +50,6 @@ public class TaskController {
             @RequestHeader(value = "X-User-Id", required = false) Long userId
     ) {
         return tasks.list(view, category, userId);
-    }
-
-    @GetMapping("/page")
-    public TaskPageResponse listPage(
-            @RequestParam(defaultValue = "OPEN") TaskView view,
-            @RequestParam(required = false) String category,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "25") @Min(1) @Max(75) int size,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
-    ) {
-        return tasks.listPage(view, category, userId, page, size);
     }
 
     @GetMapping("/{id}")
