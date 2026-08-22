@@ -363,9 +363,9 @@ export default function App() {
           {!loading && taskPage.totalElements > 0 && <div className="pagination">
             <span>Showing {firstTask}-{lastTask} of {taskPage.totalElements}</span>
             <div className="actions">
-              <button disabled={page === 0} onClick={() => setPage((current) => current - 1)}>Previous</button>
+              <button disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</button>
               <span>Page {page + 1} of {taskPage.totalPages}</span>
-              <button disabled={page + 1 >= taskPage.totalPages} onClick={() => setPage((current) => current + 1)}>Next</button>
+              <button disabled={page + 1 >= taskPage.totalPages} onClick={() => setPage((current) => Math.min(taskPage.totalPages - 1, current + 1))}>Next</button>
             </div>
           </div>}
         </div>
