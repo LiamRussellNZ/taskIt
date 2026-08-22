@@ -19,8 +19,8 @@ An ASKER creates a task in `OPEN` state. An eligible DOER claims it, making that
 ## Integrations
 
 - **Related features:** Assistance requests, notifications, profiles and reviews.
-- **Backend:** `Task`, `TaskService`, `TaskController`, task repositories, status-update and drop entities. `GET /api/tasks/page` provides paged board results without changing the existing list endpoint.
-- **Frontend:** Open, My tasks, and My work boards; task form, task-detail controls, and persisted 25/50/75 task-page selector in `frontend/src/App.tsx`.
+- **Backend:** `Task`, `TaskService`, `TaskController`, task repositories, status-update and drop entities. `GET /api/tasks` lists tasks for boards via the existing list endpoint (no paging currently implemented).
+- **Frontend:** Open, My tasks, and My work boards; task form and task-detail controls in `frontend/src/App.tsx`.
 - **Notifications / profiles / reviews:** Completion by the Primary Doer notifies the ASKER. Drops and completions can each be reviewed by the ASKER and contribute to profile ratings.
 
 ## Acceptance criteria
