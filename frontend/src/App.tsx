@@ -60,9 +60,8 @@ export default function App() {
       const result = await api.listTaskPage(view, category, page, pageSize, activeUserId)
       const lastPage = Math.max(result.totalPages - 1, 0)
       if (page > lastPage) {
-        const correctedResult = await api.listTaskPage(view, category, lastPage, pageSize, activeUserId)
+        setTaskPage({ ...emptyTaskPage, size: pageSize })
         setPage(lastPage)
-        setTaskPage(correctedResult)
         return
       }
       setTaskPage(result)
