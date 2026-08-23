@@ -57,7 +57,13 @@ export default function App() {
       return
     }
     try {
-      setTaskPage(await api.listTaskPage(view, category, page, pageSize, activeUserId))
+      const result = await api.listTaskPage(view, category, page, pageSize, activeUserId)
+      const lastPage = Math.max(result.totalPages - 1, 0)
+      if (page > lastPage) {
+        setPage(lastPage)
+        return
+      }
+      setTaskPage(result)
     } catch (requestError) {
       setTaskPage({ ...emptyTaskPage, size: pageSize })
       setError(errorMessage(requestError))

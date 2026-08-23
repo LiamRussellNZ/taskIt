@@ -28,6 +28,7 @@ Each board loads page one using the saved page size. The user can select 25, 50,
 - Given any board, when it loads, then the frontend requests 25, 50, or 75 matching tasks and displays the result count and current page.
 - Given a user who selects a page size, when they refresh the browser, then that size remains selected.
 - Given a board with more results, when a user selects Next or Previous, then the matching server page is displayed without navigating outside the available pages.
+- Given a task mutation reduces the number of available pages, when the selected page no longer exists, then the board reloads the last valid page.
 - Given an existing API client that calls `GET /api/tasks`, when pagination is introduced, then the original unpaged array response remains available.
 - Given a client that calls `GET /api/v2/tasks`, when it requests a valid page, then it receives page content and pagination metadata.
 
