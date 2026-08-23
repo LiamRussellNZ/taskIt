@@ -84,6 +84,36 @@ class TaskApiIntegrationTest {
     }
 
     @Test
+    void pagedTaskBoardsReturnMetadataAndRespectPersonalViews() throws Exception {
+        long asker = createUser("Asha", "asha@example.test", UserRole.ASKER);
+        long otherAsker = createUser("Owen", "owen@example.test", UserRole.ASKER);
+        for (int index = 0; index < 4; index++) {
+            createTask(asker);
+        }
+        createTask(otherAsker);
+
+        mvc.perform(get("/api/v2/tasks").param("page", "0").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(3));
+
+        mvc.perform(get("/api/v2/tasks").param("page", "2").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.page").value(2));
+
+        mvc.perform(get("/api/v2/tasks").param("view", "MINE_AS_ASKER").param("page", "0").param("size", "2")
+                        .header(USER_HEADER, asker))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(4))
+                .andExpect(jsonPath("$.totalPages").value(2));
+    }
+
+    @Test
     void roleAndOwnershipRestrictionsAreApplied() throws Exception {
         long asker = createUser("Asha", "asha@example.test", UserRole.ASKER);
         long doer = createUser("Dane", "dane@example.test", UserRole.DOER);

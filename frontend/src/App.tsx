@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { api } from './api'
-import type { BoardView, Task, TaskDraft, User, UserNotification, UserProfile, UserRole } from './types'
+import type { BoardView, Task, TaskDraft, TaskPage, User, UserNotification, UserProfile, UserRole } from './types'
 
 const emptyTask: TaskDraft = { title: '', description: '', category: '', location: '', remote: false }
 const viewLabels: Record<BoardView, string> = {
@@ -8,6 +8,8 @@ const viewLabels: Record<BoardView, string> = {
   MINE_AS_ASKER: 'My requests',
   MINE_AS_DOER: 'My work',
 }
+const pageSizes = [25, 50, 75]
+const emptyTaskPage: TaskPage = { content: [], page: 0, size: 25, totalElements: 0, totalPages: 0 }
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
@@ -21,7 +23,12 @@ export default function App() {
   })
   const [view, setView] = useState<BoardView>('OPEN')
   const [category, setCategory] = useState('')
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [taskPage, setTaskPage] = useState<TaskPage>(emptyTaskPage)
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(() => {
+    const stored = Number(localStorage.getItem('taskit.taskPageSize'))
+    return pageSizes.includes(stored) ? stored : 25
+  })
   const [selected, setSelected] = useState<Task | null>(null)
   const [draft, setDraft] = useState<TaskDraft | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -45,19 +52,26 @@ export default function App() {
     setLoading(true)
     setError('')
     if (view !== 'OPEN' && !activeUserId) {
-      setTasks([])
+      setTaskPage({ ...emptyTaskPage, size: pageSize })
       setLoading(false)
       return
     }
     try {
-      setTasks(await api.listTasks(view, category, activeUserId))
+      const result = await api.listTaskPage(view, category, page, pageSize, activeUserId)
+      const lastPage = Math.max(result.totalPages - 1, 0)
+      if (page > lastPage) {
+        setTaskPage({ ...emptyTaskPage, size: pageSize })
+        setPage(lastPage)
+        return
+      }
+      setTaskPage(result)
     } catch (requestError) {
-      setTasks([])
+      setTaskPage({ ...emptyTaskPage, size: pageSize })
       setError(errorMessage(requestError))
     } finally {
       setLoading(false)
     }
-  }, [view, category, activeUserId])
+  }, [view, category, activeUserId, page, pageSize])
 
   useEffect(() => { void loadUsers() }, [loadUsers])
   useEffect(() => { void loadTasks() }, [loadTasks])
@@ -79,6 +93,7 @@ export default function App() {
 
   function selectUser(id: number | undefined) {
     setActiveUserId(id)
+    setPage(0)
     setProfile(null)
     setShowNotifications(false)
     if (id) localStorage.setItem('taskit.activeUser', String(id))
@@ -238,6 +253,9 @@ export default function App() {
   }
 
   const canAsk = activeUser?.roles.includes('ASKER') ?? false
+  const tasks = taskPage.content
+  const firstTask = taskPage.totalElements === 0 ? 0 : page * pageSize + 1
+  const lastTask = Math.min((page + 1) * pageSize, taskPage.totalElements)
 
   return (
     <main>
@@ -298,12 +316,12 @@ export default function App() {
       <section className="toolbar">
         <div className="tabs" aria-label="Task board views">
           {(Object.keys(viewLabels) as BoardView[]).map((option) =>
-            <button className={view === option ? 'active' : ''} key={option} onClick={() => setView(option)}>
+            <button className={view === option ? 'active' : ''} key={option} onClick={() => { setView(option); setPage(0) }}>
               {viewLabels[option]}
             </button>
           )}
         </div>
-        <input value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Filter by category" aria-label="Category filter" />
+        <input value={category} onChange={(event) => { setCategory(event.target.value); setPage(0) }} placeholder="Filter by category" aria-label="Category filter" />
         <button className="primary" disabled={!canAsk} onClick={() => { setSelected(null); setDraft(emptyTask) }}>
           + Post a task
         </button>
@@ -313,7 +331,19 @@ export default function App() {
 
       <section className="content">
         <div className="board panel">
-          <h2>{viewLabels[view]}</h2>
+          <div className="section-heading">
+            <h2>{viewLabels[view]}</h2>
+            <label className="page-size">Tasks per page
+              <select value={pageSize} onChange={(event) => {
+                const size = Number(event.target.value)
+                setPageSize(size)
+                localStorage.setItem('taskit.taskPageSize', String(size))
+                setPage(0)
+              }}>
+                {pageSizes.map((size) => <option key={size} value={size}>{size}</option>)}
+              </select>
+            </label>
+          </div>
           {loading && <p>Loading tasks…</p>}
           {!loading && tasks.length === 0 && <p className="empty">No tasks here yet.</p>}
           <div className="task-grid">
@@ -337,6 +367,14 @@ export default function App() {
               )
             })}
           </div>
+          {!loading && taskPage.totalElements > 0 && <div className="pagination">
+            <span>Showing {firstTask}-{lastTask} of {taskPage.totalElements}</span>
+            <div className="actions">
+              <button disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</button>
+              <span>Page {page + 1} of {taskPage.totalPages}</span>
+              <button disabled={page + 1 >= taskPage.totalPages} onClick={() => setPage((current) => Math.min(taskPage.totalPages - 1, current + 1))}>Next</button>
+            </div>
+          </div>}
         </div>
         <aside className="panel details">
           {profileLoading ? <p>Loading profile…</p> :

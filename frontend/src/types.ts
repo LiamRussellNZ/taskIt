@@ -29,6 +29,14 @@ export interface Task {
   updatedAt: string
 }
 
+export interface TaskPage {
+  content: Task[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 export interface TaskAssistanceRequest {
   id: number
   requestingDoer: User
