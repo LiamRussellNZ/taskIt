@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Allow DOERS to clarify an open task before claiming it, with answers provided by the task's ASKER.
+Allow DOERs to clarify an open task before claiming it, with answers provided by the task's ASKER.
 
 ## Users and permissions
 
