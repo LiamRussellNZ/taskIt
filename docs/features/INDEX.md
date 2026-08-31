@@ -11,5 +11,6 @@ Create one document per feature from `TEMPLATE.md`. Update it whenever the featu
 | Task questions | Doers ask questions on open tasks and only the asker answers them. | `TaskQuestion.java`, `TaskService.java`, `TaskController.java` |
 | Notifications | Askers are notified about assistance requests, task questions, and task completion. | `UserNotification.java`, `UserNotificationService.java`, `UserController.java` |
 | Profiles and reviews | Public profiles expose task history and ratings; askers may submit one completion review for a Primary Doer. | `AppUser.java`, `TaskReview.java`, `UserController.java`, `TaskController.java` |
+| Task pagination | Users select 25, 50, or 75 tasks per page on every task board. | `TaskRepository.java`, `TaskService.java`, `TaskController.java`, `frontend/src/App.tsx` |
 
 Refer to `README.md` and `CONTEXT.md` before expanding a feature. Add detailed documents here when work needs decisions beyond the current implementation.
